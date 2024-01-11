@@ -31,6 +31,17 @@ class IAM:
         if "PolicyDocument" in policy:
             return policy["PolicyDocument"]
 
+    @staticmethod
+    def get_group_policy(service: object, group_name: str, policy_name: str) -> dict:
+        '''Gets the policy action and resource sections for inline policies'''
+
+        policy = service.get_group_policy(
+            GroupName=group_name, PolicyName=policy_name)
+        # Return the PolicyDocument
+        if "PolicyDocument" in policy:
+            return policy["PolicyDocument"]
+
+
     def users(self, iam_client: object) -> dict:
         """Gets IAM users and policies attached to them. 
         Both Inline and managed policies are returned.
@@ -83,8 +94,8 @@ class IAM:
 
             # Policies attached to this group - Inline
             for policy_name in Utils.paginate(iam_client, "list_group_policies", "PolicyNames", GroupName=group["GroupName"]):
-                output[group["GroupName"]]["policy"]["inline"].setdefault(policy_name, []).append(Utils.paginate(
-                    iam_client, "get_group_policy", "PolicyDocument", GroupName=group["GroupName"], PolicyName=policy))
+                output[group["GroupName"]]["policy"]["inline"].setdefault(policy_name, []).append(self.get_group_policy(
+                    iam_client, group_name=group["GroupName"], policy_name=policy_name))
 
             # Managed group Policies
             for policy in Utils.paginate(iam_client, "list_attached_group_policies", "AttachedPolicies", GroupName=group["GroupName"]):
@@ -100,7 +111,7 @@ class IAM:
             print(tabulate.tabulate(statements[0]["Statement"], headers="keys", tablefmt="pipe"), file=file)
 
         for policy, statements in policies["policy"]["managed"].items():
-            print(f"### Policy(inline) {policy} \n", file=file)
+            print(f"### Policy(managed) {policy} \n", file=file)
             print(tabulate.tabulate(statements[0]["Statement"], headers="keys", tablefmt="pipe"), file=file)
 
         
